@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Monitored Directories - FileGuard FIM{% endblock %}
+{% block page_title %}Monitored Directories{% endblock %}
+
+{% block content %}
+{% if current_user.is_administrator() %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Directory</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('directories.add') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-9">
+                    <label for="path" class="form-label">Directory Path</label>
+                    <input type="text" class="form-control" id="path" name="path" required placeholder="C:\path\to\directory or /path/to/directory">
+                    <small class="text-muted">Enter the full path to the directory you want to monitor</small>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Add Directory
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-folder2-open"></i> Configured Directories</h5>
+    </div>
+    <div class="card-body">
+        {% if directories %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Path</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Last Scan</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dir in directories %}
+                        <tr>
+                            <td><code>{{ dir.path }}</code></td>
+                            <td>
+                                {% if dir.is_enabled %}
+                                    <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Disabled</span>
+                                {% endif %}
+                                {% if dir.last_scan_status == 'incomplete' %}
+                                    <span class="badge bg-warning ms-1" title="{{ dir.last_scan_error }}">
+                                        <i class="bi bi-exclamation-triangle"></i> Incomplete
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ dir.file_count or 0 }}</td>
+                            <td>
+                                {% if dir.last_scan %}
+                                    {{ dir.last_scan.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="scanDirectory({{ dir.id }})" title="Run manual scan">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                    {% if current_user.is_administrator() %}
+                                    <button class="btn btn-outline-secondary" onclick="toggleDirectory({{ dir.id }})" title="Enable/Disable">
+                                        <i class="bi bi-toggle-on"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-folder-x fs-1"></i>
+                <p class="mt-3">No directories configured</p>
+                {% if current_user.is_administrator() %}
+                    <small>Add a directory above to start monitoring</small>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function scanDirectory(dirId) {
+    if (!confirm('Run a manual scan on this directory?')) return;
+
+    fetch(`/directories/${dirId}/scan`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Scan complete!\nAdded: ${data.added}\nModified: ${data.modified}\nDeleted: ${data.deleted}\nUnchanged: ${data.unchanged}\nEvents: ${data.events_recorded}`);
+            location.reload();
+        } else {
+            alert('Scan failed: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function toggleDirectory(dirId) {
+    fetch(`/directories/${dirId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to toggle directory');
+        }
+    });
+}
+</script>
+{% endblock %}

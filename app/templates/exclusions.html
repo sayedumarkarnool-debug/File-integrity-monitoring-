@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Exclusions - FileGuard FIM{% endblock %}
+{% block page_title %}Exclusion Patterns{% endblock %}
+
+{% block content %}
+{% if current_user.is_administrator() %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Exclusion</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('exclusions.add') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="pattern" class="form-label">Pattern</label>
+                    <input type="text" class="form-control" id="pattern" name="pattern" required placeholder="*.log or temp*">
+                </div>
+                <div class="col-md-3">
+                    <label for="pattern_type" class="form-label">Type</label>
+                    <select class="form-select" id="pattern_type" name="pattern_type">
+                        <option value="glob">Glob Pattern</option>
+                        <option value="file">Exact File Name</option>
+                        <option value="directory">Directory Name</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="description" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="description" name="description" placeholder="Optional">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Add
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Configured Exclusions</h5>
+    </div>
+    <div class="card-body">
+        {% if exclusions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                            {% if current_user.is_administrator() %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exclusion in exclusions %}
+                        <tr>
+                            <td><code>{{ exclusion.pattern }}</code></td>
+                            <td>
+                                <span class="badge bg-secondary">{{ exclusion.pattern_type }}</span>
+                            </td>
+                            <td>{{ exclusion.description or '-' }}</td>
+                            <td>
+                                {% if exclusion.is_enabled %}
+                                    <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ exclusion.created_by or 'system' }}</td>
+                            {% if current_user.is_administrator() %}
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="toggleExclusion({{ exclusion.id }})" title="Enable/Disable">
+                                        <i class="bi bi-toggle-on"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteExclusion({{ exclusion.id }})" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-3">No exclusions configured</p>
+                {% if current_user.is_administrator() %}
+                    <small>Add exclusion patterns above to skip certain files or directories</small>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h6><i class="bi bi-info-circle"></i> About Exclusions</h6>
+    <ul class="mb-0">
+        <li><strong>Glob Pattern:</strong> Matches using wildcards (e.g., *.log, temp*, **/*.tmp)</li>
+        <li><strong>Exact File Name:</strong> Matches files with exact name (e.g., .gitignore)</li>
+        <li><strong>Directory Name:</strong> Excludes entire directories (e.g., node_modules, .git)</li>
+    </ul>
+</div>
+
+<script>
+function toggleExclusion(exclusionId) {
+    fetch(`/exclusions/${exclusionId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to toggle exclusion');
+        }
+    });
+}
+
+function deleteExclusion(exclusionId) {
+    if (!confirm('Delete this exclusion pattern?')) return;
+
+    fetch(`/exclusions/${exclusionId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to delete exclusion');
+        }
+    });
+}
+</script>
+{% endblock %}

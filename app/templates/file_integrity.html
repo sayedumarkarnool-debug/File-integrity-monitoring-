@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}File Integrity - FileGuard FIM{% endblock %}
+{% block page_title %}File Integrity Events{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('integrity.index') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search File Path</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="Enter file path...">
+            </div>
+            <div class="col-md-3">
+                <label for="event_type" class="form-label">Event Type</label>
+                <select class="form-select" id="event_type" name="event_type">
+                    <option value="">All Types</option>
+                    <option value="added" {% if event_type == 'added' %}selected{% endif %}>Added</option>
+                    <option value="modified" {% if event_type == 'modified' %}selected{% endif %}>Modified</option>
+                    <option value="deleted" {% if event_type == 'deleted' %}selected{% endif %}>Deleted</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+                <a href="{{ url_for('integrity.index') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Integrity Events</h5>
+        <span class="badge bg-secondary">{{ pagination.total }} total events</span>
+    </div>
+    <div class="card-body">
+        {% if events %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Detected At (UTC)</th>
+                            <th>Type</th>
+                            <th>File Path</th>
+                            <th>Previous Hash</th>
+                            <th>Current Hash</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td>{{ event.detected_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if event.event_type == 'added' %}
+                                    <span class="badge bg-success"><i class="bi bi-plus-circle"></i> Added</span>
+                                {% elif event.event_type == 'modified' %}
+                                    <span class="badge bg-warning"><i class="bi bi-pencil-square"></i> Modified</span>
+                                {% elif event.event_type == 'deleted' %}
+                                    <span class="badge bg-danger"><i class="bi bi-trash"></i> Deleted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="text-break">{{ event.file_path }}</code>
+                                <br><small class="text-muted">{{ event.directory.path if event.directory else '' }}</small>
+                            </td>
+                            <td>
+                                {% if event.previous_hash %}
+                                    <code class="small">{{ event.previous_hash[:16] }}...</code>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if event.current_hash %}
+                                    <code class="small">{{ event.current_hash[:16] }}...</code>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if event.file_size %}
+                                    {{ (event.file_size / 1024) | round(2) }} KB
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+                <nav aria-label="Event pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('integrity.index', page=pagination.prev_num, event_type=event_type, search=search_query) }}">Previous</a>
+                        </li>
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('integrity.index', page=page_num, event_type=event_type, search=search_query) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('integrity.index', page=pagination.next_num, event_type=event_type, search=search_query) }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-3">No integrity events found</p>
+                <small>Events will appear here when file changes are detected</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

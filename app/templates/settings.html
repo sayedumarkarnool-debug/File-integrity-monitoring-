@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - FileGuard FIM{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Application Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Application Name:</th>
+                        <td>{{ config.app_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Version:</th>
+                        <td>{{ config.app_version }}</td>
+                    </tr>
+                    <tr>
+                        <th>Database Status:</th>
+                        <td>
+                            {% if db_status == 'Connected' %}
+                                <span class="badge bg-success">{{ db_status }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ db_status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Demo Mode:</th>
+                        <td>
+                            {% if config.demo_mode %}
+                                <span class="badge bg-warning">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Monitoring Configuration</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Scan Interval:</th>
+                        <td>{{ config.scan_interval }} seconds</td>
+                    </tr>
+                    <tr>
+                        <th>Max File Size:</th>
+                        <td>{{ config.max_file_size_mb }} MB</td>
+                    </tr>
+                    <tr>
+                        <th>Monitored Directories:</th>
+                        <td>{{ monitored_count }}</td>
+                    </tr>
+                    <tr>
+                        <th>Session Security:</th>
+                        <td><span class="badge bg-success">Enabled</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-shield-check"></i> Security Features</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>SHA-256 Hashing</strong>
+                        <br><small class="text-muted">Cryptographic integrity verification</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>Password Hashing</strong>
+                        <br><small class="text-muted">Werkzeug secure passwords</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>CSRF Protection</strong>
+                        <br><small class="text-muted">Flask-WTF protection enabled</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>Role-Based Access</strong>
+                        <br><small class="text-muted">Admin & read-only roles</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>Audit Logging</strong>
+                        <br><small class="text-muted">Complete activity tracking</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2 fs-4"></i>
+                    <div>
+                        <strong>Secure Sessions</strong>
+                        <br><small class="text-muted">HTTPOnly & SameSite cookies</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning">
+    <h6><i class="bi bi-exclamation-triangle"></i> Important Security Notes</h6>
+    <ul class="mb-0">
+        <li><strong>Change default password:</strong> The default admin password should be changed immediately in production</li>
+        <li><strong>Secure environment:</strong> Set strong SECRET_KEY in .env file for production use</li>
+        <li><strong>HTTPS recommended:</strong> Use HTTPS in production to protect credentials and session cookies</li>
+        <li><strong>Baseline protection:</strong> Baselines stored on the same system are not fully tamper-proof against an administrator with system access</li>
+        <li><strong>Regular backups:</strong> Back up the database regularly to preserve audit trails and baselines</li>
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Baseline Management - FileGuard FIM{% endblock %}
+{% block page_title %}Baseline Management{% endblock %}
+
+{% block content %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    <strong>About Baselines:</strong> A baseline is a trusted snapshot of your files. FileGuard compares current scans against this baseline to detect changes.
+    Replacing a baseline changes your trusted reference state - only do this after reviewing and accepting legitimate changes.
+</div>
+
+{% if directories %}
+    {% for dir in directories %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-folder2"></i> {{ dir.path }}</h5>
+        </div>
+        <div class="card-body">
+            {% set baseline_info = baseline_infos.get(dir.id) %}
+            {% if baseline_info and baseline_info.exists %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <p class="text-muted mb-1">Baseline Status</p>
+                        <p class="mb-0"><span class="badge bg-success">Active</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="text-muted mb-1">Files in Baseline</p>
+                        <p class="mb-0"><strong>{{ baseline_info.file_count }}</strong></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="text-muted mb-1">Created At</p>
+                        <p class="mb-0">{{ baseline_info.created_at.strftime('%Y-%m-%d %H:%M UTC') if baseline_info.created_at else 'Unknown' }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="text-muted mb-1">Last Scan</p>
+                        <p class="mb-0">
+                            {% if baseline_info.last_scan %}
+                                {{ baseline_info.last_scan.strftime('%Y-%m-%d %H:%M UTC') }}
+                            {% else %}
+                                <span class="text-muted">Never</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% if current_user.is_administrator() %}
+                <div class="mt-3">
+                    <button class="btn btn-warning" onclick="replaceBaseline({{ dir.id }}, '{{ dir.path }}')">
+                        <i class="bi bi-arrow-repeat"></i> Replace Baseline
+                    </button>
+                    <small class="text-muted ms-2">This will create a new trusted baseline</small>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle"></i> No baseline exists for this directory
+                </div>
+                {% if current_user.is_administrator() %}
+                <button class="btn btn-primary" onclick="createBaseline({{ dir.id }})">
+                    <i class="bi bi-plus-circle"></i> Create Baseline
+                </button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-folder-x fs-1"></i>
+            <p class="mt-3">No monitored directories configured</p>
+            <a href="{{ url_for('directories.index') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle"></i> Add Directory
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<script>
+function createBaseline(dirId) {
+    if (!confirm('Create a baseline for this directory? This will scan all files and calculate their hashes.')) return;
+
+    fetch(`/baselines/${dirId}/create`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Baseline created successfully!\n${data.file_count} files processed.`);
+            location.reload();
+        } else {
+            alert('Failed to create baseline: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function replaceBaseline(dirId, dirPath) {
+    const reason = prompt(`IMPORTANT: Replacing the baseline will change your trusted reference state.\n\nThis should only be done after reviewing and accepting legitimate changes.\n\nDirectory: ${dirPath}\n\nEnter reason for replacement (or cancel):`);
+
+    if (!reason) return;
+
+    if (!confirm('Are you absolutely sure you want to replace the baseline? This action should only be performed after careful review.')) return;
+
+    fetch(`/baselines/${dirId}/replace`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            confirmed: true,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Baseline replaced successfully!\n${data.file_count} files processed.`);
+            location.reload();
+        } else {
+            alert('Failed to replace baseline: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}
